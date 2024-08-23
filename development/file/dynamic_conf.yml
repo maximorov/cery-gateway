@@ -1,0 +1,31 @@
+http:
+  routers:
+    user-ms:
+      entryPoints:
+        - web
+      service: cmr-ms
+      rule: "Host(`user-ms.cery.com`)"
+    cmr-ms:
+      entryPoints:
+        - web
+      service: cmr-ms
+      rule: "Host(`cmr-ms.cery.com`)"
+    garage-ms:
+      entryPoints:
+        - web
+      service: garage
+      rule: "Host(`garage-ms.cery.com`)"
+
+  services:
+    user-ms:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8081"
+    cmr-ms:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8082"
+    garage:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8083"
