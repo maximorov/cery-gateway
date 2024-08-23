@@ -1,20 +1,29 @@
 http:
   routers:
+    # services
     user-ms:
       entryPoints:
         - web
       service: cmr-ms
-      rule: "Host(`user-ms.cery.com`)"
+      rule: "Host(`user-ms.cery.local`)"
     cmr-ms:
       entryPoints:
         - web
       service: cmr-ms
-      rule: "Host(`cmr-ms.cery.com`)"
+      rule: "Host(`cmr-ms.cery.local`)"
     garage-ms:
       entryPoints:
         - web
       service: garage
-      rule: "Host(`garage-ms.cery.com`)"
+      rule: "Host(`garage-ms.cery.local`)"
+    # api
+    api:
+      rule: "Host(`traefik.cery.local`)"
+      entryPoints:
+        - traefik
+      service: api@internal
+      middlewares:
+        - auth
 
   services:
     user-ms:
@@ -29,3 +38,9 @@ http:
       loadBalancer:
         servers:
           - url: "http://localhost:8083"
+
+  middlewares:
+    auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$WIsqq2X4$j71KVDK0XNLr920rGZN6l0" # cerytrafiekultimatepassword
