@@ -2,7 +2,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       '-c', 'docker build
-        -f deployments/staging/Dockerfile-staging
+        -f deployments/staging/Dockerfile
         --no-cache
         .
       '
