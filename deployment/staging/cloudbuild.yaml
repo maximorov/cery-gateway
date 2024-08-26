@@ -2,8 +2,8 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       '-c', 'docker build
-        -t us-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/$_DEPLOYMENT:$BRANCH_NAME$TAG_NAME-$SHORT_SHA
-        -t us-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/$_DEPLOYMENT:latest
+        -t us-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}:$BRANCH_NAME-$SHORT_SHA
+        -t us-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}:latest
         -f deployments/staging/Dockerfile
         --no-cache
         .
@@ -25,3 +25,10 @@ options:
 
 # Specify the service account
 serviceAccount: projects/${_PROJECT_ID}/serviceAccounts/${_SERVICE_ACCOUNT_EMAIL}
+
+substitutions:
+  _PROJECT_ID:           soy-vision-433708-i2                             # Project ID
+  _K8S_CLUSTER:          cluster                                  # K8s cluster name
+  _NAMESPACE:            default                                  # K8s namespace
+  _REPOSITORY:           cery-images                              # Artifact Registry repository name
+  _SERVICE_ACCOUNT_EMAIL: 334125085194-compute@developer.gserviceaccount.com
