@@ -60,7 +60,7 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 # Specify the logs bucket
-logsBucket: 'gs://${_BUILD_LOGS_BUCKET_NAME}'
+#logsBucket: 'gs://${_BUILD_LOGS_BUCKET_NAME}'
 
 # Specify the service account
 serviceAccount: projects/${_PROJECT_ID}/serviceAccounts/${_SERVICE_ACCOUNT_EMAIL}
@@ -74,5 +74,5 @@ substitutions:
   _DOMAIN_NAME: 'example.com'
   _DNS_ZONE: 'your-dns-zone'
   _EXTERNAL_IP: 'external-ip-of-load-balancer'
-  _BUILD_LOGS_BUCKET_NAME: _Default          # Cloud Build logs bucket name
+#  _BUILD_LOGS_BUCKET_NAME: _Default          # Cloud Build logs bucket name
   _SERVICE_ACCOUNT_EMAIL: 334125085194-compute@developer.gserviceaccount.com
