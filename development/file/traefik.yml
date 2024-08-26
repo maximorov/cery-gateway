@@ -15,3 +15,9 @@ api:
 
 log:
   level: DEBUG
+
+experimental:
+  plugins:
+    jwt-validation-middleware:
+      moduleName: "github.com/legege/jwt-validation-middleware"
+      version: "v0.2.1"

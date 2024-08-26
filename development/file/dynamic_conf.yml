@@ -1,24 +1,43 @@
 http:
+  middlewares:
+    auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$WIsqq2X4$j71KVDK0XNLr920rGZN6l0" # cerytrafiekultimatepassword
+    my-jwt-middleware:
+      plugin:
+        jwt-validation-middleware:
+          secret: ThisIsMyVerySecret
+          optional: true
+          payloadHeaders:
+            X-Custom-Header1: sub
+            X-Custom-Header2: name
+          authQueryParam: authToken
+          authCookieName: authToken
+          forwardAuth: false
+
   routers:
     # services
     user-ms:
+      rule: "Host(`cery.local`)"
       entryPoints:
         - web
-      service: cmr-ms
-      rule: "Host(`user-ms.cery.local`)"
+      service: user-ms
+      middlewares:
+        - my-jwt-middleware
     cmr-ms:
+      rule: "Host(`cery.local`)"
       entryPoints:
         - web
       service: cmr-ms
-      rule: "Host(`cmr-ms.cery.local`)"
     garage-ms:
+      rule: "Host(`cery.local`)"
       entryPoints:
         - web
       service: garage
-      rule: "Host(`garage-ms.cery.local`)"
     # api
-    api:
-      rule: "Host(`traefik.cery.local`)"
+    traefik-api:
+      rule: "Host(`cery.local`)"
       entryPoints:
         - traefik
       service: api@internal
@@ -34,13 +53,7 @@ http:
       loadBalancer:
         servers:
           - url: "http://localhost:8082"
-    garage:
+    garage-ms:
       loadBalancer:
         servers:
           - url: "http://localhost:8083"
-
-  middlewares:
-    auth:
-      basicAuth:
-        users:
-          - "admin:$apr1$WIsqq2X4$j71KVDK0XNLr920rGZN6l0" # cerytrafiekultimatepassword

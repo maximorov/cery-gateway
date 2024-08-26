@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: traefik:v3.1
+          ports:
+            - name: web
+              containerPort: 80
+            - name: traefik
+              containerPort: 8080
+          volumeMounts:
+            - name: traefik-config
+              mountPath: /etc/traefik/traefik.yml
+              subPath: traefik.yml
+            - name: dynamic-config
+              mountPath: /etc/traefik/dynamic_conf.yml
+              subPath: dynamic_conf.yml
+      volumes:
+        - name: traefik-config
+          configMap:
+            name: traefik-config
+        - name: dynamic-config
+          configMap:
+            name: dynamic-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: default
+spec:
+  type: NodePort
+  ports:
+    - name: web
+      port: 80
+      targetPort: 80
+      nodePort: 30080
+    - name: traefik
+      port: 8080
+      targetPort: 8080
+      nodePort: 30081
+  selector:
+    app: api-gateway
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: default
+data:
+  traefik.yml: |
+    entryPoints:
+      web:
+        address: ":80"
+      traefik:
+        address: ":8080"
+
+    providers:
+      file:
+        filename: /etc/traefik/dynamic_conf.yml
+        watch: true
+
+    api:
+      dashboard: true
+      insecure: true
+
+    log:
+      level: DEBUG
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-config
+  namespace: default
+data:
+  dynamic_conf.yml: |
+    http:
+      routers:
+        user-ms:
+          entryPoints:
+            - web
+          service: cmr-ms
+          rule: "Host(`user-ms.cery.local`)"
+        cmr-ms:
+          entryPoints:
+            - web
+          service: cmr-ms
+          rule: "Host(`cmr-ms.cery.local`)"
+        garage-ms:
+          entryPoints:
+            - web
+          service: garage
+          rule: "Host(`garage-ms.cery.local`)"
+        api:
+          rule: "Host(`traefik.cery.local`)"
+          entryPoints:
+            - traefik
+          service: api@internal
+          middlewares:
+            - auth
+
+      services:
+        user-ms:
+          loadBalancer:
+            servers:
+              - url: "http://localhost:8081"
+        cmr-ms:
+          loadBalancer:
+            servers:
+              - url: "http://localhost:8082"
+        garage:
+          loadBalancer:
+            servers:
+              - url: "http://localhost:8083"
+
+      middlewares:
+        auth:
+          basicAuth:
+            users:
+              - "admin:$apr1$WIsqq2X4$j71KVDK0XNLr920rGZN6l0" # cerytrafiekultimatepassword
+        my-jwt-middleware:
+          plugin:
+            jwt-validation-middleware:
+              secret: ThisIsMyVerySecret
+              optional: true
+              payloadHeaders:
+                X-Custom-Header1: sub
+                X-Custom-Header2: name
+              authQueryParam: authToken
+              authCookieName: authToken
+              forwardAuth: false
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: my-jwt-validation-middleware
+  namespace: my-namespace
+spec:
+  plugin:
+    jwt-validation-middleware:
+      secret: ThisIsMyVerySecret

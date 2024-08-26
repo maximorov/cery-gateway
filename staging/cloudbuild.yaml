@@ -1,0 +1,24 @@
+steps:
+  # Step 1: Build the Docker image for Traefik
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/traefik', '.']
+    dir: 'development/file'
+
+  # Step 2: Push the Docker image to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/traefik']
+
+  # Step 3: Deploy the Traefik container to the Kubernetes cluster
+  - name: 'gcr.io/cloud-builders/kubectl'
+    args:
+      - 'apply'
+      - '-f'
+      - 'k8s/traefik-deployment.yaml'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=my-cluster'
+
+images:
+  - 'gcr.io/$PROJECT_ID/traefik'
+
+timeout: '1200s'
