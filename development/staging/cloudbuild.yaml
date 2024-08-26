@@ -56,6 +56,8 @@ steps:
     entrypoint: gcloud
     args: [ 'dns', 'record-sets', 'transaction', 'execute', '--zone=${_DNS_ZONE}' ]
 
+options:
+  logging: CLOUD_LOGGING_ONLY
 
 # Specify the logs bucket
 logsBucket: 'gs://${_BUILD_LOGS_BUCKET_NAME}'
