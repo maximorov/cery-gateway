@@ -19,25 +19,27 @@ http:
   routers:
     # services
     user-ms:
-      rule: "Host(`cery.local`)"
+      rule: "Host(`user.cery.local`)"
       entryPoints:
         - web
       service: user-ms
       middlewares:
         - my-jwt-middleware
     cmr-ms:
-      rule: "Host(`cery.local`)"
+      rule: "Host(`cmr.cery.local`)"
       entryPoints:
         - web
       service: cmr-ms
+      middlewares:
+        - my-jwt-middleware
     garage-ms:
-      rule: "Host(`cery.local`)"
+      rule: "Host(`garage.cery.local`)"
       entryPoints:
         - web
       service: garage
     # api
     traefik-api:
-      rule: "Host(`cery.local`)"
+      rule: "Host(`traefik.cery.local`)"
       entryPoints:
         - traefik
       service: api@internal

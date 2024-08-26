@@ -1,0 +1,66 @@
+steps:
+  # 1. Authenticate with GCP
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args: ['auth', 'activate-service-account', '--key-file=${_SERVICE_ACCOUNT_KEY}']
+
+  # 2. Create GKE cluster
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args: ['container', 'clusters', 'create', '${_CLUSTER_NAME}', '--zone', '${_CLUSTER_ZONE}']
+
+  # 3. Get GKE credentials
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args: ['container', 'clusters', 'get-credentials', '${_CLUSTER_NAME}', '--zone', '${_CLUSTER_ZONE}']
+
+  # 4. Apply Gateway API CRDs
+  - name: 'gcr.io/google.com/cloudsdktool/kubectl'
+    args: ['apply', '-f', 'https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml']
+
+  # 5. Add Helm repository for Traefik
+  - name: 'gcr.io/google.com/cloudsdktool/helm'
+    args: ['repo', 'add', 'traefik', 'https://helm.traefik.io/traefik']
+
+  # 6. Update Helm repository
+  - name: 'gcr.io/google.com/cloudsdktool/helm'
+    args: ['repo', 'update']
+
+  # 7. Install Traefik with Gateway API support
+  - name: 'gcr.io/google.com/cloudsdktool/helm'
+    args: [
+      'install', 'traefik', 'traefik/traefik',
+      '--namespace', 'traefik',
+      '--create-namespace',
+      '--set', 'experimental.kubernetesGateway.enabled=true'
+    ]
+
+  # 8. Apply Gateway and HTTPRoute manifests
+  - name: 'gcr.io/google.com/cloudsdktool/kubectl'
+    args: ['apply', '-f', 'deployment.yaml']
+
+  # 9. Apply DNS settings (optional, if using Google Cloud DNS)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args: ['dns', 'record-sets', 'transaction', 'start', '--zone=${_DNS_ZONE}']
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args: [
+      'dns', 'record-sets', 'transaction', 'add', '${_EXTERNAL_IP}',
+      '--name=${_DOMAIN_NAME}',
+      '--ttl=300',
+      '--type=A',
+      '--zone=${_DNS_ZONE}'
+    ]
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args: ['dns', 'record-sets', 'transaction', 'execute', '--zone=${_DNS_ZONE}']
+
+# Substitutions (variables)
+substitutions:
+  _SERVICE_ACCOUNT_KEY: 'your-service-account-key-file.json'
+  _CLUSTER_NAME: 'my-cluster'
+  _CLUSTER_ZONE: 'us-central1-a'
+  _DOMAIN_NAME: 'example.com'
+  _DNS_ZONE: 'your-dns-zone'
+  _EXTERNAL_IP: 'external-ip-of-load-balancer'

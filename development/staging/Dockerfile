@@ -1,4 +1,4 @@
-FROM golang:1.22.5-alpine AS builder
+FROM traefik:v3.1
 
 USER root
 

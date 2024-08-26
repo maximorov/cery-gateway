@@ -156,3 +156,87 @@ spec:
   plugin:
     jwt-validation-middleware:
       secret: ThisIsMyVerySecret
+
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: Gateway
+metadata:
+  name: my-gateway
+  namespace: default
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      routes:
+        kind: HTTPRoute
+        namespaces:
+          from: All
+        selector:
+          matchLabels:
+            app: my-app
+        rules:
+          - backendRefs:
+              - name: user-ms
+                port: 8081
+          - backendRefs:
+              - name: cmr-ms
+                port: 8082
+          - backendRefs:
+              - name: garage-ms
+                port: 8083
+
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: HTTPRoute
+metadata:
+  name: user-ms-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: my-gateway
+  rules:
+    - matches:
+        - path:
+            type: Prefix
+            value: /user
+      backendRefs:
+        - name: user-ms
+          port: 8081
+
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: HTTPRoute
+metadata:
+  name: cmr-ms-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: my-gateway
+  rules:
+    - matches:
+        - path:
+            type: Prefix
+            value: /cmr
+      backendRefs:
+        - name: cmr-ms
+          port: 8082
+
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: HTTPRoute
+metadata:
+  name: garage-ms-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: my-gateway
+  rules:
+    - matches:
+        - path:
+            type: Prefix
+            value: /garage
+      backendRefs:
+        - name: garage-ms
+          port: 8083
