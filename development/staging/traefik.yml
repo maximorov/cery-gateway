@@ -5,7 +5,8 @@ entryPoints:
     address: ":8080"
 
 providers:
-  kubernetesGateway: {}
+  kubernetesGateway:
+    endpoint: "http://34.132.103.142:8080"
 
 api:
   dashboard: true

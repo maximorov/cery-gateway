@@ -1,67 +1,56 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api-gateway
-  namespace: default
+  name: traefik
+  namespace: kube-system
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: api-gateway
+      app: traefik
   template:
     metadata:
       labels:
-        app: api-gateway
+        app: traefik
     spec:
       containers:
-        - name: api-gateway
-          image: traefik:v3.1
-          ports:
-            - name: web
-              containerPort: 80
-            - name: traefik
-              containerPort: 8080
+        - name: traefik
+          image: gcr.io/soy-vision-433708-i2/traefik:latest
+          args:
+            - "--configFile=/etc/traefik/traefik.yml"
           volumeMounts:
-            - name: traefik-config
-              mountPath: /etc/traefik/traefik.yml
-              subPath: traefik.yml
-            - name: dynamic-config
-              mountPath: /etc/traefik/dynamic_conf.yml
-              subPath: dynamic_conf.yml
+            - name: config-volume
+              mountPath: /etc/traefik
+              readOnly: true
       volumes:
-        - name: traefik-config
+        - name: config-volume
           configMap:
             name: traefik-config
-        - name: dynamic-config
-          configMap:
-            name: dynamic-config
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: api-gateway
-  namespace: default
+  name: traefik
+  namespace: kube-system
 spec:
-  type: NodePort
   ports:
-    - name: web
+    - protocol: TCP
       port: 80
       targetPort: 80
-      nodePort: 30080
-    - name: traefik
-      port: 8080
-      targetPort: 8080
-      nodePort: 30081
+    - protocol: TCP
+      port: 443
+      targetPort: 443
   selector:
-    app: api-gateway
+    app: traefik
+  type: LoadBalancer
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: api-gateway-config
-  namespace: default
+  name: traefik-config
+  namespace: kube-system
 data:
   traefik.yml: |
     entryPoints:
@@ -71,9 +60,8 @@ data:
         address: ":8080"
 
     providers:
-      file:
-        filename: /etc/traefik/dynamic_conf.yml
-        watch: true
+      kubernetesGateway:
+        endpoint: "http://34.132.103.142:8080"
 
     api:
       dashboard: true
@@ -82,161 +70,8 @@ data:
     log:
       level: DEBUG
 
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: dynamic-config
-  namespace: default
-data:
-  dynamic_conf.yml: |
-    http:
-      routers:
-        user-ms:
-          entryPoints:
-            - web
-          service: cmr-ms
-          rule: "Host(`user-ms.cery.local`)"
-        cmr-ms:
-          entryPoints:
-            - web
-          service: cmr-ms
-          rule: "Host(`cmr-ms.cery.local`)"
-        garage-ms:
-          entryPoints:
-            - web
-          service: garage
-          rule: "Host(`garage-ms.cery.local`)"
-        api:
-          rule: "Host(`traefik.cery.local`)"
-          entryPoints:
-            - traefik
-          service: api@internal
-          middlewares:
-            - auth
-
-      services:
-        user-ms:
-          loadBalancer:
-            servers:
-              - url: "http://localhost:8081"
-        cmr-ms:
-          loadBalancer:
-            servers:
-              - url: "http://localhost:8082"
-        garage:
-          loadBalancer:
-            servers:
-              - url: "http://localhost:8083"
-
-      middlewares:
-        auth:
-          basicAuth:
-            users:
-              - "admin:$apr1$WIsqq2X4$j71KVDK0XNLr920rGZN6l0" # cerytrafiekultimatepassword
-        my-jwt-middleware:
-          plugin:
-            jwt-validation-middleware:
-              secret: ThisIsMyVerySecret
-              optional: true
-              payloadHeaders:
-                X-Custom-Header1: sub
-                X-Custom-Header2: name
-              authQueryParam: authToken
-              authCookieName: authToken
-              forwardAuth: false
-
----
-apiVersion: traefik.containo.us/v1alpha1
-kind: Middleware
-metadata:
-  name: my-jwt-validation-middleware
-  namespace: my-namespace
-spec:
-  plugin:
-    jwt-validation-middleware:
-      secret: ThisIsMyVerySecret
-
----
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: Gateway
-metadata:
-  name: my-gateway
-  namespace: default
-spec:
-  gatewayClassName: traefik
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      routes:
-        kind: HTTPRoute
-        namespaces:
-          from: All
-        selector:
-          matchLabels:
-            app: my-app
-        rules:
-          - backendRefs:
-              - name: user-ms
-                port: 8081
-          - backendRefs:
-              - name: cmr-ms
-                port: 8082
-          - backendRefs:
-              - name: garage-ms
-                port: 8083
-
----
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: HTTPRoute
-metadata:
-  name: user-ms-route
-  namespace: default
-spec:
-  parentRefs:
-    - name: my-gateway
-  rules:
-    - matches:
-        - path:
-            type: Prefix
-            value: /user
-      backendRefs:
-        - name: user-ms
-          port: 8081
-
----
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: HTTPRoute
-metadata:
-  name: cmr-ms-route
-  namespace: default
-spec:
-  parentRefs:
-    - name: my-gateway
-  rules:
-    - matches:
-        - path:
-            type: Prefix
-            value: /cmr
-      backendRefs:
-        - name: cmr-ms
-          port: 8082
-
----
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: HTTPRoute
-metadata:
-  name: garage-ms-route
-  namespace: default
-spec:
-  parentRefs:
-    - name: my-gateway
-  rules:
-    - matches:
-        - path:
-            type: Prefix
-            value: /garage
-      backendRefs:
-        - name: garage-ms
-          port: 8083
+    experimental:
+      plugins:
+        jwt-validation-middleware:
+          moduleName: "github.com/legege/jwt-validation-middleware"
+          version: "v0.2.1"
