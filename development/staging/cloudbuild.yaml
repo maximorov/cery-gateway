@@ -2,29 +2,29 @@ steps:
   # 1. Authenticate with GCP
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
-    args: ['auth', 'activate-service-account', '--key-file=${_SERVICE_ACCOUNT_KEY}']
+    args: [ 'auth', 'activate-service-account', '--key-file=${_SERVICE_ACCOUNT_KEY}' ]
 
   # 2. Create GKE cluster
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
-    args: ['container', 'clusters', 'create', '${_CLUSTER_NAME}', '--zone', '${_CLUSTER_ZONE}']
+    args: [ 'container', 'clusters', 'create', '${_CLUSTER_NAME}', '--zone', '${_CLUSTER_ZONE}' ]
 
   # 3. Get GKE credentials
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
-    args: ['container', 'clusters', 'get-credentials', '${_CLUSTER_NAME}', '--zone', '${_CLUSTER_ZONE}']
+    args: [ 'container', 'clusters', 'get-credentials', '${_CLUSTER_NAME}', '--zone', '${_CLUSTER_ZONE}' ]
 
   # 4. Apply Gateway API CRDs
   - name: 'gcr.io/google.com/cloudsdktool/kubectl'
-    args: ['apply', '-f', 'https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml']
+    args: [ 'apply', '-f', 'https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml' ]
 
   # 5. Add Helm repository for Traefik
   - name: 'gcr.io/google.com/cloudsdktool/helm'
-    args: ['repo', 'add', 'traefik', 'https://helm.traefik.io/traefik']
+    args: [ 'repo', 'add', 'traefik', 'https://helm.traefik.io/traefik' ]
 
   # 6. Update Helm repository
   - name: 'gcr.io/google.com/cloudsdktool/helm'
-    args: ['repo', 'update']
+    args: [ 'repo', 'update' ]
 
   # 7. Install Traefik with Gateway API support
   - name: 'gcr.io/google.com/cloudsdktool/helm'
@@ -37,12 +37,12 @@ steps:
 
   # 8. Apply Gateway and HTTPRoute manifests
   - name: 'gcr.io/google.com/cloudsdktool/kubectl'
-    args: ['apply', '-f', 'deployment.yaml']
+    args: [ 'apply', '-f', 'deployment.yaml' ]
 
   # 9. Apply DNS settings (optional, if using Google Cloud DNS)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
-    args: ['dns', 'record-sets', 'transaction', 'start', '--zone=${_DNS_ZONE}']
+    args: [ 'dns', 'record-sets', 'transaction', 'start', '--zone=${_DNS_ZONE}' ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args: [
@@ -54,13 +54,23 @@ steps:
     ]
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
-    args: ['dns', 'record-sets', 'transaction', 'execute', '--zone=${_DNS_ZONE}']
+    args: [ 'dns', 'record-sets', 'transaction', 'execute', '--zone=${_DNS_ZONE}' ]
+
+
+# Specify the logs bucket
+logsBucket: 'gs://${_BUILD_LOGS_BUCKET_NAME}'
+
+# Specify the service account
+serviceAccount: projects/${_PROJECT_ID}/serviceAccounts/${_SERVICE_ACCOUNT_EMAIL}
 
 # Substitutions (variables)
 substitutions:
+  _PROJECT_ID: soy-vision-433708-i2                             # Project ID
   _SERVICE_ACCOUNT_KEY: 'your-service-account-key-file.json'
   _CLUSTER_NAME: 'my-cluster'
   _CLUSTER_ZONE: 'us-central1-a'
   _DOMAIN_NAME: 'example.com'
   _DNS_ZONE: 'your-dns-zone'
   _EXTERNAL_IP: 'external-ip-of-load-balancer'
+  _BUILD_LOGS_BUCKET_NAME: cery_experiment_cloud_build_logs          # Cloud Build logs bucket name
+  _SERVICE_ACCOUNT_EMAIL: maximorov@gmail.com
